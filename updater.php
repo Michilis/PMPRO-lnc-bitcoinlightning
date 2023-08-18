@@ -1,8 +1,8 @@
 <?php
-class WP_LNC_Bitcoinlightning_Updater {
+class PMPro_LNC_Bitcoinlightning_Updater {
 
 	private $file;
-        private $plugin;
+	private $plugin;
 	private $basename;
 	private $active;
 	private $username;
@@ -38,22 +38,22 @@ class WP_LNC_Bitcoinlightning_Updater {
 	}
 
 	private function get_repository_info() {
-	    if ( is_null( $this->github_response ) ) { // Do we have a response?
+	    if ( is_null( $this->github_response ) ) { // Hebben we een reactie?
 		$args = array();
-	        $request_uri = sprintf( 'https://api.github.com/repos/%s/%s/releases', $this->username, $this->repository ); // Build URI
+	        $request_uri = sprintf( 'https://api.github.com/repos/%s/%s/releases', $this->username, $this->repository ); // Bouw URI op
 		$args = array();
 
-	        if( $this->authorize_token ) { // Is there an access token?
-		          $args['headers']['Authorization'] = "bearer {$this->authorize_token}"; // Set the headers
+	        if( $this->authorize_token ) { // Is er een toegangstoken?
+		          $args['headers']['Authorization'] = "bearer {$this->authorize_token}"; // Stel de headers in
 	        }
 
-	        $response = json_decode( wp_remote_retrieve_body( wp_remote_get( $request_uri, $args ) ), true ); // Get JSON and parse it
+	        $response = json_decode( wp_remote_retrieve_body( wp_remote_get( $request_uri, $args ) ), true ); // Haal JSON op en analyseer het
 
-	        if( is_array( $response ) ) { // If it is an array
-	            $response = current( $response ); // Get the first item
+	        if( is_array( $response ) ) { // Als het een array is
+	            $response = current( $response ); // Haal het eerste item op
 	        }
 
-	        $this->github_response = $response; // Set it to our property
+	        $this->github_response = $response; // Stel het in als onze eigenschap
 	    }
 	}
 
@@ -62,54 +62,54 @@ class WP_LNC_Bitcoinlightning_Updater {
 		add_filter( 'plugins_api', array( $this, 'plugin_popup' ), 10, 3);
 		add_filter( 'upgrader_post_install', array( $this, 'after_install' ), 10, 3 );
 
-		// Add Authorization Token to download_package
+		// Voeg Autorisatietoken toe aan download_package
 		add_filter( 'upgrader_pre_download',
 			function() {
 				add_filter( 'http_request_args', [ $this, 'download_package' ], 15, 2 );
-				return false; // upgrader_pre_download filter default return value.
+				return false; // Standaard retourwaarde voor upgrader_pre_download filter.
 			}
 		);
 	}
 
 	public function modify_transient( $transient ) {
 
-		if( property_exists( $transient, 'checked') ) { // Check if transient has a checked property
+		if( property_exists( $transient, 'checked') ) { // Controleer of de tijdelijke waarde een gecontroleerde eigenschap heeft
 
-			if( $checked = $transient->checked ) { // Did Wordpress check for updates?
+			if( $checked = $transient->checked ) { // Heeft WordPress gecontroleerd op updates?
 
-				$this->get_repository_info(); // Get the repo info
-				$out_of_date = version_compare( $this->github_response['tag_name'], $checked[ $this->basename ] ); // Check if we're out of date
+				$this->get_repository_info(); // Haal de repo-info op
+				$out_of_date = version_compare( $this->github_response['tag_name'], $checked[ $this->basename ] ); // Controleer of we verouderd zijn
 
 				if( $out_of_date ) {
 
-					$new_files = $this->github_response['zipball_url']; // Get the ZIP
+					$new_files = $this->github_response['zipball_url']; // Haal de ZIP op
 
-					$slug = current( explode('/', $this->basename ) ); // Create valid slug
+					$slug = current( explode('/', $this->basename ) ); // Maak een geldige slug aan
 
-					$plugin = array( // setup our plugin info
+					$plugin = array( // stel onze plugin-info in
 						'url' => $this->plugin["PluginURI"],
 						'slug' => $slug,
 						'package' => $new_files,
 						'new_version' => $this->github_response['tag_name']
 					);
 
-					$transient->response[$this->basename] = (object) $plugin; // Return it in response
+					$transient->response[$this->basename] = (object) $plugin; // Retourneer het als reactie
 				}
 			}
 		}
 
-		return $transient; // Return filtered transient
+		return $transient; // Retourneer gefilterde tijdelijke waarde
 	}
 
 	public function plugin_popup( $result, $action, $args ) {
 
-		if( ! empty( $args->slug ) ) { // If there is a slug
+		if( ! empty( $args->slug ) ) { // Als er een slug is
 
-			if( $args->slug == current( explode( '/' , $this->basename ) ) ) { // And it's our slug
+			if( $args->slug == current( explode( '/' , $this->basename ) ) ) { // En het is onze slug
 
-				$this->get_repository_info(); // Get our repo info
+				$this->get_repository_info(); // Haal onze repo-info op
 
-				// Set it to an array
+				// Stel het in als een array
 				$plugin = array(
 					'name'				=> $this->plugin["Name"],
 					'slug'				=> $this->basename,
@@ -126,11 +126,11 @@ class WP_LNC_Bitcoinlightning_Updater {
 					'download_link'		=> $this->github_response['zipball_url']
 				);
 
-				return (object) $plugin; // Return the data
+				return (object) $plugin; // Retourneer de gegevens
 			}
 
 		}
-		return $result; // Otherwise return default
+		return $result; // Anders retourneer standaardwaarde
 	}
 
 	public function download_package( $args, $url ) {
@@ -147,14 +147,14 @@ class WP_LNC_Bitcoinlightning_Updater {
 	}
 
 	public function after_install( $response, $hook_extra, $result ) {
-		global $wp_filesystem; // Get global FS object
+		global $wp_filesystem; // Haal het globale FS-object op
 
-		$install_directory = plugin_dir_path( $this->file ); // Our plugin directory
-		$wp_filesystem->move( $result['destination'], $install_directory ); // Move files to the plugin dir
-		$result['destination'] = $install_directory; // Set the destination for the rest of the stack
+		$install_directory = plugin_dir_path( $this->file ); // Onze plugin-map
+		$wp_filesystem->move( $result['destination'], $install_directory ); // Verplaats bestanden naar de plugin-map
+		$result['destination'] = $install_directory; // Stel de bestemming in voor de rest van de stack
 
-		if ( $this->active ) { // If it was active
-			activate_plugin( $this->basename ); // Reactivate
+		if ( $this->active ) { // Als het actief was
+			activate_plugin( $this->basename ); // Activeer opnieuw
 		}
 
 		return $result;
